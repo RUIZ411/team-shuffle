@@ -113,46 +113,21 @@ function shuffleTeams() {
     return;
   }
 
-  // 티어별 그룹화 (뒤 숫자 기준)
-  const tiers = {};
-
-  for (let p of players) {
-    const match = p.match(/(\d+)$/);
-
-    if (!match) {
-      alert("이름 뒤에 티어 숫자를 입력해야 합니다. 예: A1, B1");
-      return;
-    }
-
-    const tier = match[1];
-
-    if (!tiers[tier]) tiers[tier] = [];
-    tiers[tier].push(p);
-  }
-
+    // 입력 순서 기준으로 2명씩 한 티어로 묶음
   let t1 = [];
   let t2 = [];
 
-  // 각 티어는 반드시 2명씩
-  Object.keys(tiers)
-    .sort((a, b) => Number(a) - Number(b))
-    .forEach(tier => {
-      const group = tiers[tier];
+  for (let i = 0; i < players.length; i += 2) {
+    const pair = [players[i], players[i + 1]];
 
-      if (group.length !== 2) {
-        alert(`${tier} 티어 인원이 2명이 아닙니다.`);
-        return;
-      }
-
-      // 랜덤으로 한 명씩 분배
-      if (Math.random() < 0.5) {
-        t1.push(group[0]);
-        t2.push(group[1]);
-      } else {
-        t1.push(group[1]);
-        t2.push(group[0]);
-      }
-    });
+    if (Math.random() < 0.5) {
+      t1.push(pair[0]);
+      t2.push(pair[1]);
+    } else {
+      t1.push(pair[1]);
+      t2.push(pair[0]);
+    }
+  }
 
   displayTeam("team1", t1);
   displayTeam("team2", t2);

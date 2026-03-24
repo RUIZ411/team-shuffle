@@ -1,0 +1,135 @@
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
+
+export default function TeamShufflePage() {
+  const [players, setPlayers] = useState(() => {
+    const saved = localStorage.getItem("players");
+    return saved ? JSON.parse(saved) : Array(10).fill("");
+  });
+  const [team1, setTeam1] = useState([]);
+  const [team2, setTeam2] = useState([]);
+
+  const handleChange = (index, value) => {
+    const newPlayers = [...players];
+    newPlayers[index] = value;
+    setPlayers(newPlayers);
+  };
+
+  useEffect(() => {
+    localStorage.setItem("players", JSON.stringify(players));
+  }, [players]);
+
+  const resetPlayers = () => {
+    if (confirm("멤버를 초기화하시겠습니까?")) {
+      const empty = Array(10).fill("");
+      setPlayers(empty);
+      localStorage.removeItem("players");
+    }
+  };
+
+  const shuffleTeams = () => {
+    if (players.some((p) => p.trim() === "")) {
+      alert("10명의 이름을 모두 입력해야 합니다.");
+      return;
+    }
+
+    // 티어 숫자 기준으로 그룹화 (예: A1, B1 → 1티어)
+    const tiers = {};
+
+    players.forEach((p) => {
+      const match = p.match(/(\d+)$/); // 뒤의 숫자 추출
+      const tier = match ? match[1] : "unknown";
+
+      if (!tiers[tier]) tiers[tier] = [];
+      tiers[tier].push(p);
+    });
+
+    let t1 = [];
+    let t2 = [];
+
+    // 각 티어별로 랜덤 섞은 뒤 번갈아 배치
+    Object.values(tiers).forEach((group) => {
+      const shuffled = [...group].sort(() => Math.random() - 0.5);
+
+      shuffled.forEach((player) => {
+        if (t1.length < 5 && (t1.length <= t2.length)) {
+          t1.push(player);
+        } else if (t2.length < 5) {
+          t2.push(player);
+        }
+      });
+    });
+
+    setTeam1(t1);
+    setTeam2(t2);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
+      <Card className="w-full max-w-xl shadow-xl rounded-2xl">
+        <CardContent className="p-6">
+          <h1 className="text-2xl font-bold mb-4 text-center">
+            5 vs 5 팀 섞기
+          </h1>
+
+          <div className="grid grid-cols-2 gap-3">
+            {players.map((player, index) => (
+              <input
+                key={index}
+                type="text"
+                placeholder={`플레이어 ${index + 1}`}
+                value={player}
+                onChange={(e) => handleChange(index, e.target.value)}
+                className="border rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+            ))}
+          </div>
+
+          <div className="flex justify-center mt-6">
+            <Button
+              onClick={shuffleTeams}
+              className="px-6 py-2 text-lg rounded-2xl"
+            >
+              팀 섞기
+            </Button>
+            <Button
+              variant="outline"
+              onClick={resetPlayers}
+              className="ml-3 px-4 py-2 rounded-2xl"
+            >
+              멤버 초기화
+            </Button>
+          </div>
+
+          {(team1.length > 0 || team2.length > 0) && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6 grid grid-cols-2 gap-4"
+            >
+              <div className="bg-blue-50 p-4 rounded-2xl shadow">
+                <h2 className="font-semibold mb-2">팀 1</h2>
+                <ul className="space-y-1">
+                  {team1.map((p, i) => (
+                    <li key={i}>{p}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="bg-green-50 p-4 rounded-2xl shadow">
+                <h2 className="font-semibold mb-2">팀 2</h2>
+                <ul className="space-y-1">
+                  {team2.map((p, i) => (
+                    <li key={i}>{p}</li>
+                  ))}
+                </ul>
+              </div>
+            </motion.div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

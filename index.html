@@ -2,174 +2,250 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>5대5 팀 섞기</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>5 vs 5 팀 섞기</title>
   <style>
+    * { box-sizing: border-box; }
     body {
+      margin: 0;
       font-family: Arial, sans-serif;
       background: #f3f4f6;
+      min-height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      padding: 24px;
     }
-
     .container {
       background: white;
+      width: 100%;
+      max-width: 520px;
       padding: 24px;
-      border-radius: 16px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-      width: 420px;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
     }
-
     h1 {
       text-align: center;
-      margin-bottom: 16px;
+      margin: 0 0 20px;
+      font-size: 28px;
     }
-
+    .desc {
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 18px;
+    }
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8px;
+      gap: 10px;
+      margin-bottom: 14px;
     }
-
     input {
-      padding: 8px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-    }
-
-    button {
-      margin-top: 16px;
       width: 100%;
-      padding: 10px;
+      padding: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      font-size: 15px;
+    }
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    button {
       border: none;
       border-radius: 12px;
+      padding: 13px 16px;
       font-size: 16px;
       cursor: pointer;
-      background: linear-gradient(90deg,#3b82f6,#9333ea);
-      color: white;
     }
-
+    .primary {
+      flex: 1;
+      background: linear-gradient(90deg, #3b82f6, #9333ea);
+      color: white;
+      font-weight: 700;
+    }
+    .secondary {
+      background: #e5e7eb;
+      color: #111827;
+      min-width: 110px;
+    }
     .teams {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
-      margin-top: 16px;
+      margin-bottom: 14px;
     }
-
-    .team {
+    .team-box {
       background: #f9fafb;
-      padding: 12px;
-      border-radius: 12px;
+      border-radius: 14px;
+      padding: 14px;
+      min-height: 180px;
+    }
+    .team-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+    li {
+      margin: 8px 0;
+      font-size: 17px;
+    }
+    .message {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    @media (max-width: 640px) {
+      h1 { font-size: 24px; }
+      .teams, .grid { grid-template-columns: 1fr 1fr; }
+      .btn-row { flex-direction: column; }
+      .secondary { width: 100%; }
     }
   </style>
 </head>
 <body>
+  <div class="container">
+    <h1>5 vs 5 팀 섞기</h1>
+    <div class="desc">입력 순서대로 2명씩 같은 티어로 인식합니다. (1-2, 3-4, 5-6, 7-8, 9-10)</div>
 
-<div class="container">
-  <h1>5 vs 5 팀 섞기</h1>
+    <div class="grid" id="inputs"></div>
 
-  <div class="grid" id="inputs"></div>
-
-  <button onclick="shuffleTeams()">팀 섞기</button>
-
-  <div class="teams">
-    <div class="team">
-      <strong>팀 1</strong>
-      <ul id="team1"></ul>
+    <div class="btn-row">
+      <button class="primary" onclick="shuffleTeams()">팀 섞기</button>
+      <button class="secondary" onclick="resetPlayers()">멤버 초기화</button>
     </div>
-    <div class="team">
-      <strong>팀 2</strong>
-      <ul id="team2"></ul>
+
+    <div class="teams">
+      <div class="team-box">
+        <div class="team-title">팀 1</div>
+        <ul id="team1"></ul>
+      </div>
+      <div class="team-box">
+        <div class="team-title">팀 2</div>
+        <ul id="team2"></ul>
+      </div>
     </div>
+
+    <div class="message" id="message">한 번 입력한 멤버는 저장되며, 다음 섞기 때는 직전 결과와 동일한 조합을 피합니다.</div>
   </div>
-</div>
 
-<script>
+  <script>
+    const PLAYER_COUNT = 10;
+    const savedPlayers = JSON.parse(localStorage.getItem("players") || "[]");
+    const previousResult = JSON.parse(localStorage.getItem("lastTeams") || "null");
+    const inputsDiv = document.getElementById("inputs");
 
-// 입력칸 생성 + 저장 불러오기
-const saved = JSON.parse(localStorage.getItem("players") || "[]");
-const inputsDiv = document.getElementById("inputs");
-
-for (let i = 0; i < 10; i++) {
-  const input = document.createElement("input");
-  input.placeholder = `플레이어 ${i+1}`;
-  input.value = saved[i] || "";
-
-  input.addEventListener("input", () => {
-    const values = Array.from(document.querySelectorAll("input")).map(i => i.value);
-    localStorage.setItem("players", JSON.stringify(values));
-  });
-
-  inputsDiv.appendChild(input);
-}
-
-function shuffleTeams() {
-  let players = Array.from(document.querySelectorAll("input")).map(i => i.value.trim());
-
-  // 10명 확인
-  if (players.length !== 10 || players.some(p => p === "")) {
-    alert("10명을 모두 입력해야 합니다.");
-    return;
-  }
-
-    // 입력 순서 기준으로 2명씩 한 티어로 묶음
-  let t1 = [];
-  let t2 = [];
-
-  for (let i = 0; i < players.length; i += 2) {
-    const pair = [players[i], players[i + 1]];
-
-    if (Math.random() < 0.5) {
-      t1.push(pair[0]);
-      t2.push(pair[1]);
-    } else {
-      t1.push(pair[1]);
-      t2.push(pair[0]);
+    for (let i = 0; i < PLAYER_COUNT; i++) {
+      const input = document.createElement("input");
+      input.placeholder = `플레이어 ${i + 1}`;
+      input.value = savedPlayers[i] || "";
+      input.addEventListener("input", savePlayers);
+      inputsDiv.appendChild(input);
     }
-  }
 
-  displayTeam("team1", t1);
-  displayTeam("team2", t2);
-}
+    function savePlayers() {
+      const values = Array.from(document.querySelectorAll("#inputs input")).map(input => input.value.trim());
+      localStorage.setItem("players", JSON.stringify(values));
+    }
 
-  // 티어별 그룹화 (뒤 숫자 기준)
-  const tiers = {};
+    function resetPlayers() {
+      if (!confirm("저장된 멤버를 초기화할까요?")) return;
 
-  players.forEach(p => {
-    const match = p.match(/(\d+)$/);
-    const tier = match ? match[1] : "0";
+      localStorage.removeItem("players");
+      localStorage.removeItem("lastTeams");
 
-    if (!tiers[tier]) tiers[tier] = [];
-    tiers[tier].push(p);
-  });
+      document.querySelectorAll("#inputs input").forEach(input => input.value = "");
+      document.getElementById("team1").innerHTML = "";
+      document.getElementById("team2").innerHTML = "";
+      document.getElementById("message").textContent = "멤버가 초기화되었습니다.";
+    }
 
-  let t1 = [];
-  let t2 = [];
+    function getPlayers() {
+      return Array.from(document.querySelectorAll("#inputs input")).map(input => input.value.trim());
+    }
 
-  Object.values(tiers).forEach(group => {
-    const shuffled = group.sort(() => Math.random() - 0.5);
+    function makeTeams(players) {
+      const team1 = [];
+      const team2 = [];
 
-    t1.push(shuffled[0]);
-    t2.push(shuffled[1]);
-  });
+      for (let i = 0; i < players.length; i += 2) {
+        const a = players[i];
+        const b = players[i + 1];
 
-  displayTeam("team1", t1);
-  displayTeam("team2", t2);
-}
+        if (Math.random() < 0.5) {
+          team1.push(a);
+          team2.push(b);
+        } else {
+          team1.push(b);
+          team2.push(a);
+        }
+      }
 
-function displayTeam(id, team) {
-  const ul = document.getElementById(id);
-  ul.innerHTML = "";
+      return { team1, team2 };
+    }
 
-  team.forEach(p => {
-    const li = document.createElement("li");
-    li.textContent = p;
-    ul.appendChild(li);
-  });
-}
+    function normalizeTeam(team) {
+      return [...team].sort().join("|");
+    }
 
-</script>
+    function isSameAsPrevious(result, previous) {
+      if (!previous) return false;
 
+      const currentA = normalizeTeam(result.team1);
+      const currentB = normalizeTeam(result.team2);
+      const prevA = normalizeTeam(previous.team1);
+      const prevB = normalizeTeam(previous.team2);
+
+      return (currentA === prevA && currentB === prevB) || (currentA === prevB && currentB === prevA);
+    }
+
+    function displayTeam(id, team) {
+      const ul = document.getElementById(id);
+      ul.innerHTML = "";
+
+      team.forEach(name => {
+        const li = document.createElement("li");
+        li.textContent = name;
+        ul.appendChild(li);
+      });
+    }
+
+    function shuffleTeams() {
+      const players = getPlayers();
+
+      if (players.length !== PLAYER_COUNT || players.some(name => name === "")) {
+        alert("10명의 이름을 모두 입력해야 합니다.");
+        return;
+      }
+
+      let result = null;
+      let attempts = 0;
+
+      do {
+        result = makeTeams(players);
+        attempts++;
+      } while (isSameAsPrevious(result, previousResult ? JSON.parse(localStorage.getItem("lastTeams")) : null) && attempts < 30);
+
+      displayTeam("team1", result.team1);
+      displayTeam("team2", result.team2);
+
+      localStorage.setItem("lastTeams", JSON.stringify(result));
+
+      if (attempts > 1) {
+        document.getElementById("message").textContent = "직전 결과와 다른 조합으로 다시 섞었습니다.";
+      } else {
+        document.getElementById("message").textContent = "팀이 섞였습니다.";
+      }
+    }
+  </script>
 </body>
 </html>

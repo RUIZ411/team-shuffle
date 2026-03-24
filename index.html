@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>5 vs 5 팀 섞기</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -82,7 +80,7 @@
     .secondary {
       background: #e5e7eb;
       color: #111827;
-      min-width: 120px;
+      min-width: 100px;
     }
 
     .teams {
@@ -158,22 +156,23 @@
 
     <div class="btn-row">
       <button class="primary" onclick="shuffleTeams()">팀 섞기</button>
-      <button class="secondary" onclick="resetPlayers()">멤버 초기화</button>
+      <button class="secondary" onclick="copyTeams()">복사</button>
+      <button class="secondary" onclick="resetPlayers()">초기화</button>
     </div>
 
     <div class="teams">
       <div class="team-box">
-        <div class="team-title">팀 1</div>
+        <div class="team-title">블루</div>
         <ul id="team1"></ul>
       </div>
       <div class="team-box">
-        <div class="team-title">팀 2</div>
+        <div class="team-title">레드</div>
         <ul id="team2"></ul>
       </div>
     </div>
 
     <div class="message" id="message">
-      한 번 입력한 멤버는 저장되며, 다음 섞기 때는 직전 결과와 같은 조합을 최대한 피합니다.
+      한 번 입력한 멤버는 저장되며, 다음 섞기 때는 직전 결과와 최소 2라인 이상 다르게 섞습니다.
     </div>
   </div>
 
@@ -250,24 +249,6 @@
       return { team1, team2 };
     }
 
-    function normalizeTeam(team) {
-      return [...team].sort().join("|");
-    }
-
-    function isSameAsPrevious(current, previous) {
-      if (!previous) return false;
-
-      const currentA = normalizeTeam(current.team1);
-      const currentB = normalizeTeam(current.team2);
-      const prevA = normalizeTeam(previous.team1);
-      const prevB = normalizeTeam(previous.team2);
-
-      return (
-        (currentA === prevA && currentB === prevB) ||
-        (currentA === prevB && currentB === prevA)
-      );
-    }
-
     function displayTeam(id, team) {
       const ul = document.getElementById(id);
       ul.innerHTML = "";
@@ -277,6 +258,40 @@
         li.textContent = team[i];
         ul.appendChild(li);
       }
+    }
+
+    function countChangedLines(current, previous) {
+      if (!previous) return 5;
+
+      let changed = 0;
+
+      for (let i = 0; i < 5; i++) {
+        const currentBlue = current.team1[i];
+        const currentRed = current.team2[i];
+        const prevBlue = previous.team1[i];
+        const prevRed = previous.team2[i];
+
+        if (currentBlue !== prevBlue || currentRed !== prevRed) {
+          changed++;
+        }
+      }
+
+      return changed;
+    }
+
+    function isSameAsPrevious(current, previous) {
+      if (!previous) return false;
+
+      for (let i = 0; i < 5; i++) {
+        if (
+          current.team1[i] !== previous.team1[i] ||
+          current.team2[i] !== previous.team2[i]
+        ) {
+          return false;
+        }
+      }
+
+      return true;
     }
 
     function shuffleTeams() {
@@ -295,19 +310,58 @@
       do {
         result = makeTeams(players);
         attempts++;
-      } while (isSameAsPrevious(result, previousResult) && attempts < 30);
+      } while (
+        previousResult &&
+        countChangedLines(result, previousResult) < 2 &&
+        attempts < 50
+      );
 
       displayTeam("team1", result.team1);
       displayTeam("team2", result.team2);
 
       localStorage.setItem("lastTeams", JSON.stringify(result));
 
-      if (attempts > 1) {
-        document.getElementById("message").textContent =
-          "직전 결과와 다른 조합으로 다시 섞었습니다.";
-      } else {
+      if (!previousResult) {
         document.getElementById("message").textContent = "팀이 섞였습니다.";
+      } else {
+        const changedLines = countChangedLines(result, previousResult);
+
+        if (changedLines >= 2) {
+          document.getElementById("message").textContent =
+            `직전 결과와 ${changedLines}라인 다르게 섞었습니다.`;
+        } else if (isSameAsPrevious(result, previousResult)) {
+          document.getElementById("message").textContent =
+            "가능한 조합이 제한되어 직전 결과와 같게 나왔습니다.";
+        } else {
+          document.getElementById("message").textContent =
+            `직전 결과와 ${changedLines}라인 다르게 섞였습니다.`;
+        }
       }
+    }
+
+    function copyTeams() {
+      const team1Items = Array.from(document.querySelectorAll("#team1 li")).map(li => li.textContent.trim());
+      const team2Items = Array.from(document.querySelectorAll("#team2 li")).map(li => li.textContent.trim());
+
+      if (team1Items.length !== 5 || team2Items.length !== 5) {
+        alert("먼저 팀을 섞어주세요.");
+        return;
+      }
+
+      let text = "블루\t레드\n";
+
+      for (let i = 0; i < 5; i++) {
+        text += `${team1Items[i]}\t${team2Items[i]}\n`;
+      }
+
+      navigator.clipboard.writeText(text)
+        .then(() => {
+          document.getElementById("message").textContent =
+            "블루 / 레드 표 형식으로 복사되었습니다.";
+        })
+        .catch(() => {
+          alert("복사에 실패했습니다. 브라우저 권한을 확인해주세요.");
+        });
     }
 
     loadPlayers();

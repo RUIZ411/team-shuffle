@@ -3,21 +3,68 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>5 vs 5 팀 섞기</title>
+  <title>BKG 증바람랜드 팀 셔플</title>
   <style>
     * { box-sizing: border-box; }
+
+    :root {
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --text: #111827;
+      --subtext: #6b7280;
+      --border: #d1d5db;
+      --soft: #f9fafb;
+      --soft2: #e5e7eb;
+      --msg-bg: #eff6ff;
+      --msg-text: #1d4ed8;
+      --shadow: 0 10px 30px rgba(0,0,0,0.08);
+      --primary: linear-gradient(90deg, #3b82f6, #9333ea);
+    }
+
+    body.dark {
+      --bg: #111827;
+      --card: #1f2937;
+      --text: #f9fafb;
+      --subtext: #cbd5e1;
+      --border: #374151;
+      --soft: #273244;
+      --soft2: #374151;
+      --msg-bg: #1e3a8a;
+      --msg-text: #dbeafe;
+      --shadow: 0 10px 30px rgba(0,0,0,0.35);
+      --primary: linear-gradient(90deg, #2563eb, #7c3aed);
+    }
 
     body {
       margin: 0;
       font-family: Arial, sans-serif;
-      background: #f3f4f6;
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
       padding: 24px;
+      transition: background 0.25s, color 0.25s;
     }
 
     .page {
       max-width: 1200px;
       margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 16px;
+    }
+
+    .mode-toggle {
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-size: 14px;
+      box-shadow: var(--shadow);
     }
 
     .double-wrap {
@@ -28,22 +75,24 @@
     }
 
     .container {
-      background: white;
+      background: var(--card);
       width: 100%;
       padding: 24px;
       border-radius: 20px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      box-shadow: var(--shadow);
+      transition: background 0.25s, color 0.25s;
     }
 
     h1 {
       text-align: center;
       margin: 0 0 20px;
-      font-size: 28px;
+      font-size: 24px;
+      color: var(--text);
     }
 
     .desc {
       text-align: center;
-      color: #666;
+      color: var(--subtext);
       font-size: 14px;
       margin-bottom: 18px;
       line-height: 1.5;
@@ -59,15 +108,22 @@
     input {
       width: 100%;
       padding: 12px;
-      border: 1px solid #d1d5db;
+      border: 1px solid var(--border);
       border-radius: 10px;
       font-size: 15px;
+      background: var(--soft);
+      color: var(--text);
+    }
+
+    input::placeholder {
+      color: var(--subtext);
     }
 
     .btn-row {
       display: flex;
       gap: 10px;
       margin-bottom: 16px;
+      flex-wrap: wrap;
     }
 
     button {
@@ -80,14 +136,14 @@
 
     .primary {
       flex: 1;
-      background: linear-gradient(90deg, #3b82f6, #9333ea);
+      background: var(--primary);
       color: white;
       font-weight: 700;
     }
 
     .secondary {
-      background: #e5e7eb;
-      color: #111827;
+      background: var(--soft2);
+      color: var(--text);
       min-width: 110px;
     }
 
@@ -99,7 +155,7 @@
     }
 
     .team-box {
-      background: #f9fafb;
+      background: var(--soft);
       border-radius: 14px;
       padding: 14px;
       min-height: 180px;
@@ -109,6 +165,7 @@
       font-size: 22px;
       font-weight: 700;
       margin-bottom: 10px;
+      color: var(--text);
     }
 
     ul {
@@ -119,11 +176,12 @@
     li {
       margin: 8px 0;
       font-size: 17px;
+      color: var(--text);
     }
 
     .message {
-      background: #eff6ff;
-      color: #1d4ed8;
+      background: var(--msg-bg);
+      color: var(--msg-text);
       border-radius: 10px;
       padding: 10px 12px;
       font-size: 14px;
@@ -137,15 +195,19 @@
     }
 
     @media (max-width: 640px) {
-      h1 { font-size: 24px; }
+      h1 { font-size: 21px; }
       .teams, .grid { grid-template-columns: 1fr 1fr; }
       .btn-row { flex-direction: column; }
-      .secondary { width: 100%; }
+      .secondary, .primary { width: 100%; }
     }
   </style>
 </head>
 <body>
   <div class="page">
+    <div class="topbar">
+      <button class="mode-toggle" id="modeToggle">다크모드</button>
+    </div>
+
     <div class="double-wrap">
       <div class="container" id="shuffle1">
         <h1>BKG 증바람랜드 A</h1>
@@ -203,6 +265,21 @@
 
   <script>
     const PLAYER_COUNT = 10;
+
+    function applyTheme(theme) {
+      document.body.classList.toggle("dark", theme === "dark");
+      localStorage.setItem("site_theme", theme);
+      document.getElementById("modeToggle").textContent =
+        theme === "dark" ? "라이트모드" : "다크모드";
+    }
+
+    const savedTheme = localStorage.getItem("site_theme") || "light";
+    applyTheme(savedTheme);
+
+    document.getElementById("modeToggle").addEventListener("click", () => {
+      const isDark = document.body.classList.contains("dark");
+      applyTheme(isDark ? "light" : "dark");
+    });
 
     function createShuffleApp(rootId, storagePrefix) {
       const root = document.getElementById(rootId);
@@ -265,24 +342,8 @@
         return { team1, team2 };
       }
 
-      function normalizeTeam(team) {
-        return [...team].sort().join("|");
-      }
-
-      function isSameAsPrevious(result, previous) {
-        if (!previous) return false;
-
-        const currentA = normalizeTeam(result.team1);
-        const currentB = normalizeTeam(result.team2);
-        const prevA = normalizeTeam(previous.team1);
-        const prevB = normalizeTeam(previous.team2);
-
-        return (currentA === prevA && currentB === prevB) || (currentA === prevB && currentB === prevA);
-      }
-
       function displayTeam(el, team) {
         el.innerHTML = "";
-
         team.forEach(name => {
           const li = document.createElement("li");
           li.textContent = name;
@@ -292,7 +353,6 @@
 
       function countChangedLines(current, previous) {
         if (!previous) return 5;
-
         let changed = 0;
 
         for (let i = 0; i < 5; i++) {
@@ -305,7 +365,6 @@
             changed++;
           }
         }
-
         return changed;
       }
 
@@ -328,17 +387,7 @@
             messageEl.textContent = "블루 / 레드 형식으로 복사되었습니다.";
           })
           .catch(() => {
-            const textarea = document.createElement("textarea");
-            textarea.value = text;
-            document.body.appendChild(textarea);
-            textarea.select();
-            try {
-              document.execCommand("copy");
-              messageEl.textContent = "블루 / 레드 형식으로 복사되었습니다.";
-            } catch (e) {
-              alert("복사에 실패했습니다. 브라우저 권한을 확인해주세요.");
-            }
-            document.body.removeChild(textarea);
+            alert("복사에 실패했습니다.");
           });
       }
 

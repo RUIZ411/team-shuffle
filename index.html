@@ -90,6 +90,11 @@ button {
   color: white;
 }
 
+.copy {
+  background: #10b981;
+  color: white;
+}
+
 .reset {
   background: #e5e7eb;
 }
@@ -115,6 +120,12 @@ ul {
   padding-left: 20px;
 }
 
+.message {
+  margin-top: 12px;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
 @media(max-width:900px){
   .wrap{
     grid-template-columns:1fr;
@@ -136,6 +147,7 @@ ul {
     <div class="inputs"></div>
     <div class="buttons">
       <button class="shuffle">팀 섞기</button>
+      <button class="copy">복사</button>
       <button class="reset">초기화</button>
     </div>
     <div class="teams">
@@ -148,6 +160,7 @@ ul {
         <ul class="team2"></ul>
       </div>
     </div>
+    <div class="message"></div>
   </div>
 
   <div class="box" id="shuffle2">
@@ -155,6 +168,7 @@ ul {
     <div class="inputs"></div>
     <div class="buttons">
       <button class="shuffle">팀 섞기</button>
+      <button class="copy">복사</button>
       <button class="reset">초기화</button>
     </div>
     <div class="teams">
@@ -167,6 +181,7 @@ ul {
         <ul class="team2"></ul>
       </div>
     </div>
+    <div class="message"></div>
   </div>
 
 </div>
@@ -198,77 +213,117 @@ function createApp(id) {
   const inputs = root.querySelector(".inputs");
   const team1 = root.querySelector(".team1");
   const team2 = root.querySelector(".team2");
+  const message = root.querySelector(".message");
 
-  for(let i=0;i<10;i++){
+  for (let i = 0; i < 10; i++) {
     const input = document.createElement("input");
-    input.placeholder = `플레이어 ${i+1}`;
+    input.placeholder = `플레이어 ${i + 1}`;
     input.addEventListener("input", save);
     inputs.appendChild(input);
   }
 
-  async function save(){
-    const values = [...inputs.querySelectorAll("input")].map(v=>v.value);
-    await set(ref(db,id+"/players"), values);
+  async function save() {
+    const values = [...inputs.querySelectorAll("input")].map(v => v.value);
+    await set(ref(db, id + "/players"), values);
   }
 
-  onValue(ref(db,id+"/players"), snap=>{
+  onValue(ref(db, id + "/players"), snap => {
     const data = snap.val() || [];
-    [...inputs.querySelectorAll("input")].forEach((input,i)=>{
-      if(document.activeElement!==input){
+    [...inputs.querySelectorAll("input")].forEach((input, i) => {
+      if (document.activeElement !== input) {
         input.value = data[i] || "";
       }
     });
   });
 
-  root.querySelector(".shuffle").addEventListener("click", async ()=>{
-    const players = [...inputs.querySelectorAll("input")].map(v=>v.value);
+  root.querySelector(".shuffle").addEventListener("click", async () => {
+    const players = [...inputs.querySelectorAll("input")].map(v => v.value.trim());
 
-    if(players.some(v=>!v)) return alert("10명 입력");
+    if (players.some(v => !v)) {
+      alert("10명 입력");
+      return;
+    }
 
-    let a=[], b=[];
+    let a = [], b = [];
 
-    for(let i=0;i<10;i+=2){
-      if(Math.random()<0.5){
+    for (let i = 0; i < 10; i += 2) {
+      if (Math.random() < 0.5) {
         a.push(players[i]);
-        b.push(players[i+1]);
-      }else{
-        a.push(players[i+1]);
+        b.push(players[i + 1]);
+      } else {
+        a.push(players[i + 1]);
         b.push(players[i]);
       }
     }
 
-    await set(ref(db,id+"/teams"), {a,b});
+    await set(ref(db, id + "/teams"), { a, b });
+    message.textContent = "팀 결과가 생성되었습니다.";
   });
 
-  onValue(ref(db,id+"/teams"), snap=>{
+  onValue(ref(db, id + "/teams"), snap => {
     const data = snap.val();
-    if(!data) return;
+    if (!data) return;
 
-    team1.innerHTML="";
-    team2.innerHTML="";
+    team1.innerHTML = "";
+    team2.innerHTML = "";
 
-    data.a.forEach(v=>{
-      const li=document.createElement("li");
-      li.textContent=v;
+    data.a.forEach(v => {
+      const li = document.createElement("li");
+      li.textContent = v;
       team1.appendChild(li);
     });
 
-    data.b.forEach(v=>{
-      const li=document.createElement("li");
-      li.textContent=v;
+    data.b.forEach(v => {
+      const li = document.createElement("li");
+      li.textContent = v;
       team2.appendChild(li);
     });
   });
 
-  root.querySelector(".reset").addEventListener("click", async ()=>{
-    await set(ref(db,id), null);
+  root.querySelector(".copy").addEventListener("click", async () => {
+    const blue = [...team1.querySelectorAll("li")].map(li => li.textContent.trim());
+    const red = [...team2.querySelectorAll("li")].map(li => li.textContent.trim());
+
+    if (blue.length === 0 || red.length === 0) {
+      alert("먼저 팀을 섞어주세요.");
+      return;
+    }
+
+    let text = "블루 / 레드\n";
+    for (let i = 0; i < Math.max(blue.length, red.length); i++) {
+      text += `${blue[i] || ""} / ${red[i] || ""}\n`;
+    }
+
+    try {
+      await navigator.clipboard.writeText(text);
+      message.textContent = "팀 결과가 복사되었습니다.";
+    } catch (error) {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+
+      try {
+        document.execCommand("copy");
+        message.textContent = "팀 결과가 복사되었습니다.";
+      } catch (e) {
+        alert("복사에 실패했습니다.");
+      }
+
+      document.body.removeChild(textarea);
+    }
+  });
+
+  root.querySelector(".reset").addEventListener("click", async () => {
+    await set(ref(db, id), null);
+    message.textContent = "초기화되었습니다.";
   });
 }
 
 createApp("shuffle1");
 createApp("shuffle2");
 
-window.toggleMode = function(){
+window.toggleMode = function() {
   document.body.classList.toggle("dark");
 }
 </script>

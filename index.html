@@ -123,12 +123,13 @@ ul {
 .message {
   margin-top: 12px;
   font-size: 14px;
-  opacity: 0.9;
+  opacity: 0.95;
+  line-height: 1.5;
 }
 
-@media(max-width:900px){
-  .wrap{
-    grid-template-columns:1fr;
+@media (max-width: 900px) {
+  .wrap {
+    grid-template-columns: 1fr;
   }
 }
 </style>
@@ -192,6 +193,7 @@ import {
   getDatabase,
   ref,
   set,
+  get,
   onValue
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 
@@ -207,96 +209,185 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const PLAYER_COUNT = 10;
+
+function normalizeTeam(team) {
+  return [...team].sort().join("|");
+}
+
+function isSameAsPrevious(current, previous) {
+  if (!previous || !previous.team1 || !previous.team2) return false;
+
+  const currentA = normalizeTeam(current.team1);
+  const currentB = normalizeTeam(current.team2);
+  const prevA = normalizeTeam(previous.team1);
+  const prevB = normalizeTeam(previous.team2);
+
+  return (
+    (currentA === prevA && currentB === prevB) ||
+    (currentA === prevB && currentB === prevA)
+  );
+}
+
+function countChangedLines(current, previous) {
+  if (!previous || !previous.team1 || !previous.team2) return 5;
+
+  let changed = 0;
+
+  for (let i = 0; i < 5; i++) {
+    const currentBlue = current.team1[i] || "";
+    const currentRed = current.team2[i] || "";
+    const prevBlue = previous.team1[i] || "";
+    const prevRed = previous.team2[i] || "";
+
+    if (currentBlue !== prevBlue || currentRed !== prevRed) {
+      changed++;
+    }
+  }
+
+  return changed;
+}
+
+function makeTeams(players) {
+  const team1 = [];
+  const team2 = [];
+
+  for (let i = 0; i < players.length; i += 2) {
+    const a = players[i];
+    const b = players[i + 1];
+
+    if (Math.random() < 0.5) {
+      team1.push(a);
+      team2.push(b);
+    } else {
+      team1.push(b);
+      team2.push(a);
+    }
+  }
+
+  return { team1, team2 };
+}
 
 function createApp(id) {
   const root = document.getElementById(id);
-  const inputs = root.querySelector(".inputs");
-  const team1 = root.querySelector(".team1");
-  const team2 = root.querySelector(".team2");
-  const message = root.querySelector(".message");
+  const inputsWrap = root.querySelector(".inputs");
+  const team1El = root.querySelector(".team1");
+  const team2El = root.querySelector(".team2");
+  const messageEl = root.querySelector(".message");
 
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < PLAYER_COUNT; i++) {
     const input = document.createElement("input");
     input.placeholder = `플레이어 ${i + 1}`;
-    input.addEventListener("input", save);
-    inputs.appendChild(input);
+    input.addEventListener("input", savePlayers);
+    inputsWrap.appendChild(input);
   }
 
-  async function save() {
-    const values = [...inputs.querySelectorAll("input")].map(v => v.value);
-    await set(ref(db, id + "/players"), values);
+  async function savePlayers() {
+    const players = [...inputsWrap.querySelectorAll("input")].map(input => input.value.trim());
+    const snapshot = await get(ref(db, id));
+    const prevData = snapshot.exists() ? snapshot.val() : {};
+
+    await set(ref(db, id), {
+      players,
+      lastTeams: prevData.lastTeams || null,
+      message: prevData.message || ""
+    });
   }
 
-  onValue(ref(db, id + "/players"), snap => {
-    const data = snap.val() || [];
-    [...inputs.querySelectorAll("input")].forEach((input, i) => {
+  function renderTeams(data) {
+    team1El.innerHTML = "";
+    team2El.innerHTML = "";
+
+    const teams = data?.lastTeams;
+    if (!teams || !teams.team1 || !teams.team2) return;
+
+    teams.team1.forEach(name => {
+      const li = document.createElement("li");
+      li.textContent = name;
+      team1El.appendChild(li);
+    });
+
+    teams.team2.forEach(name => {
+      const li = document.createElement("li");
+      li.textContent = name;
+      team2El.appendChild(li);
+    });
+  }
+
+  onValue(ref(db, id), snapshot => {
+    const data = snapshot.val() || {};
+    const players = Array.isArray(data.players) ? data.players : [];
+
+    [...inputsWrap.querySelectorAll("input")].forEach((input, i) => {
       if (document.activeElement !== input) {
-        input.value = data[i] || "";
+        input.value = players[i] || "";
       }
     });
+
+    renderTeams(data);
+    messageEl.textContent = data.message || "";
   });
 
   root.querySelector(".shuffle").addEventListener("click", async () => {
-    const players = [...inputs.querySelectorAll("input")].map(v => v.value.trim());
+    const players = [...inputsWrap.querySelectorAll("input")].map(input => input.value.trim());
 
-    if (players.some(v => !v)) {
-      alert("10명 입력");
+    if (players.length !== PLAYER_COUNT || players.some(v => !v)) {
+      alert("10명을 모두 입력해주세요.");
       return;
     }
 
-    let a = [], b = [];
+    const snapshot = await get(ref(db, id));
+    const data = snapshot.exists() ? snapshot.val() : {};
+    const previousResult = data.lastTeams || null;
 
-    for (let i = 0; i < 10; i += 2) {
-      if (Math.random() < 0.5) {
-        a.push(players[i]);
-        b.push(players[i + 1]);
-      } else {
-        a.push(players[i + 1]);
-        b.push(players[i]);
-      }
+    let result = null;
+    let attempts = 0;
+
+    do {
+      result = makeTeams(players);
+      attempts++;
+    } while (
+      previousResult &&
+      (isSameAsPrevious(result, previousResult) || countChangedLines(result, previousResult) < 2) &&
+      attempts < 100
+    );
+
+    if (
+      previousResult &&
+      (isSameAsPrevious(result, previousResult) || countChangedLines(result, previousResult) < 2)
+    ) {
+      alert("조건을 만족하는 새 팀 결과를 만들지 못했습니다. 입력 조합을 확인해주세요.");
+      return;
     }
 
-    await set(ref(db, id + "/teams"), { a, b });
-    message.textContent = "팀 결과가 생성되었습니다.";
-  });
+    const changedLines = previousResult ? countChangedLines(result, previousResult) : 5;
 
-  onValue(ref(db, id + "/teams"), snap => {
-    const data = snap.val();
-    if (!data) return;
-
-    team1.innerHTML = "";
-    team2.innerHTML = "";
-
-    data.a.forEach(v => {
-      const li = document.createElement("li");
-      li.textContent = v;
-      team1.appendChild(li);
-    });
-
-    data.b.forEach(v => {
-      const li = document.createElement("li");
-      li.textContent = v;
-      team2.appendChild(li);
+    await set(ref(db, id), {
+      players,
+      lastTeams: result,
+      message: previousResult
+        ? `직전 결과와 ${changedLines}라인 다르게 섞었습니다.`
+        : "첫 팀 결과가 생성되었습니다."
     });
   });
 
   root.querySelector(".copy").addEventListener("click", async () => {
-    const blue = [...team1.querySelectorAll("li")].map(li => li.textContent.trim());
-    const red = [...team2.querySelectorAll("li")].map(li => li.textContent.trim());
+    const blue = [...team1El.querySelectorAll("li")].map(li => li.textContent.trim());
+    const red = [...team2El.querySelectorAll("li")].map(li => li.textContent.trim());
 
-    if (blue.length === 0 || red.length === 0) {
+    if (blue.length !== 5 || red.length !== 5) {
       alert("먼저 팀을 섞어주세요.");
       return;
     }
 
-    let text = "블루 / 레드\n";
-    for (let i = 0; i < Math.max(blue.length, red.length); i++) {
-      text += `${blue[i] || ""} / ${red[i] || ""}\n`;
+    let text = "블루\t레드\n";
+    for (let i = 0; i < 5; i++) {
+      text += `${blue[i]}\t${red[i]}\n`;
     }
 
     try {
       await navigator.clipboard.writeText(text);
-      message.textContent = "팀 결과가 복사되었습니다.";
+      messageEl.textContent = "팀 결과가 복사되었습니다.";
     } catch (error) {
       const textarea = document.createElement("textarea");
       textarea.value = text;
@@ -305,7 +396,7 @@ function createApp(id) {
 
       try {
         document.execCommand("copy");
-        message.textContent = "팀 결과가 복사되었습니다.";
+        messageEl.textContent = "팀 결과가 복사되었습니다.";
       } catch (e) {
         alert("복사에 실패했습니다.");
       }
@@ -315,17 +406,22 @@ function createApp(id) {
   });
 
   root.querySelector(".reset").addEventListener("click", async () => {
-    await set(ref(db, id), null);
-    message.textContent = "초기화되었습니다.";
+    if (!confirm("멤버와 직전 팀 결과를 초기화할까요?")) return;
+
+    await set(ref(db, id), {
+      players: Array(PLAYER_COUNT).fill(""),
+      lastTeams: null,
+      message: "초기화되었습니다."
+    });
   });
 }
 
 createApp("shuffle1");
 createApp("shuffle2");
 
-window.toggleMode = function() {
+window.toggleMode = function () {
   document.body.classList.toggle("dark");
-}
+};
 </script>
 
 </body>

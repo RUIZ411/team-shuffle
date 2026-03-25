@@ -6,41 +6,56 @@
   <title>5 vs 5 팀 섞기</title>
   <style>
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       font-family: Arial, sans-serif;
       background: #f3f4f6;
       min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
       padding: 24px;
     }
+
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .double-wrap {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
     .container {
       background: white;
       width: 100%;
-      max-width: 520px;
       padding: 24px;
       border-radius: 20px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.08);
     }
+
     h1 {
       text-align: center;
       margin: 0 0 20px;
       font-size: 28px;
     }
+
     .desc {
       text-align: center;
       color: #666;
       font-size: 14px;
       margin-bottom: 18px;
+      line-height: 1.5;
     }
+
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
       margin-bottom: 14px;
     }
+
     input {
       width: 100%;
       padding: 12px;
@@ -48,11 +63,13 @@
       border-radius: 10px;
       font-size: 15px;
     }
+
     .btn-row {
       display: flex;
       gap: 10px;
       margin-bottom: 16px;
     }
+
     button {
       border: none;
       border-radius: 12px;
@@ -60,42 +77,50 @@
       font-size: 16px;
       cursor: pointer;
     }
+
     .primary {
       flex: 1;
       background: linear-gradient(90deg, #3b82f6, #9333ea);
       color: white;
       font-weight: 700;
     }
+
     .secondary {
       background: #e5e7eb;
       color: #111827;
       min-width: 110px;
     }
+
     .teams {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
       margin-bottom: 14px;
     }
+
     .team-box {
       background: #f9fafb;
       border-radius: 14px;
       padding: 14px;
       min-height: 180px;
     }
+
     .team-title {
       font-size: 22px;
       font-weight: 700;
       margin-bottom: 10px;
     }
+
     ul {
       margin: 0;
       padding-left: 20px;
     }
+
     li {
       margin: 8px 0;
       font-size: 17px;
     }
+
     .message {
       background: #eff6ff;
       color: #1d4ed8;
@@ -104,6 +129,13 @@
       font-size: 14px;
       line-height: 1.5;
     }
+
+    @media (max-width: 980px) {
+      .double-wrap {
+        grid-template-columns: 1fr;
+      }
+    }
+
     @media (max-width: 640px) {
       h1 { font-size: 24px; }
       .teams, .grid { grid-template-columns: 1fr 1fr; }
@@ -113,194 +145,241 @@
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>5 vs 5 팀 섞기</h1>
-    <div class="desc">입력 순서대로 2명씩 같은 티어로 인식합니다. (1-2, 3-4, 5-6, 7-8, 9-10)</div>
+  <div class="page">
+    <div class="double-wrap">
+      <div class="container" id="shuffle1">
+        <h1>5 vs 5 팀 섞기 A</h1>
+        <div class="desc">입력 순서대로 2명씩 같은 티어로 인식합니다. (1-2, 3-4, 5-6, 7-8, 9-10)</div>
 
-    <div class="grid" id="inputs"></div>
+        <div class="grid inputs"></div>
 
-    <div class="btn-row">
-      <button class="primary" onclick="shuffleTeams()">팀 섞기</button>
-      <button class="secondary" onclick="copyTeams()">복사</button>
-      <button class="secondary" onclick="resetPlayers()">멤버 초기화</button>
-    </div>
+        <div class="btn-row">
+          <button class="primary shuffle-btn">팀 섞기</button>
+          <button class="secondary copy-btn">복사</button>
+          <button class="secondary reset-btn">멤버 초기화</button>
+        </div>
 
-    <div class="teams">
-      <div class="team-box">
-        <div class="team-title">블루</div>
-        <ul id="team1"></ul>
+        <div class="teams">
+          <div class="team-box">
+            <div class="team-title">블루</div>
+            <ul class="team1"></ul>
+          </div>
+          <div class="team-box">
+            <div class="team-title">레드</div>
+            <ul class="team2"></ul>
+          </div>
+        </div>
+
+        <div class="message">한 번 입력한 멤버는 저장되며, 다음 섞기 때는 직전 결과와 최소 2라인 이상 다르게 섞습니다.</div>
       </div>
-      <div class="team-box">
-        <div class="team-title">레드</div>
-        <ul id="team2"></ul>
+
+      <div class="container" id="shuffle2">
+        <h1>5 vs 5 팀 섞기 B</h1>
+        <div class="desc">입력 순서대로 2명씩 같은 티어로 인식합니다. (1-2, 3-4, 5-6, 7-8, 9-10)</div>
+
+        <div class="grid inputs"></div>
+
+        <div class="btn-row">
+          <button class="primary shuffle-btn">팀 섞기</button>
+          <button class="secondary copy-btn">복사</button>
+          <button class="secondary reset-btn">멤버 초기화</button>
+        </div>
+
+        <div class="teams">
+          <div class="team-box">
+            <div class="team-title">블루</div>
+            <ul class="team1"></ul>
+          </div>
+          <div class="team-box">
+            <div class="team-title">레드</div>
+            <ul class="team2"></ul>
+          </div>
+        </div>
+
+        <div class="message">한 번 입력한 멤버는 저장되며, 다음 섞기 때는 직전 결과와 최소 2라인 이상 다르게 섞습니다.</div>
       </div>
     </div>
-
-    <div class="message" id="message">한 번 입력한 멤버는 저장되며, 다음 섞기 때는 직전 결과와 최소 2라인 이상 다르게 섞습니다.</div>
   </div>
 
   <script>
     const PLAYER_COUNT = 10;
-    const savedPlayers = JSON.parse(localStorage.getItem("players") || "[]");
-        const inputsDiv = document.getElementById("inputs");
 
-    for (let i = 0; i < PLAYER_COUNT; i++) {
-      const input = document.createElement("input");
-      input.placeholder = `플레이어 ${i + 1}`;
-      input.value = savedPlayers[i] || "";
-      input.addEventListener("input", savePlayers);
-      inputsDiv.appendChild(input);
-    }
+    function createShuffleApp(rootId, storagePrefix) {
+      const root = document.getElementById(rootId);
+      const inputsDiv = root.querySelector(".inputs");
+      const team1El = root.querySelector(".team1");
+      const team2El = root.querySelector(".team2");
+      const messageEl = root.querySelector(".message");
+      const shuffleBtn = root.querySelector(".shuffle-btn");
+      const copyBtn = root.querySelector(".copy-btn");
+      const resetBtn = root.querySelector(".reset-btn");
 
-    function savePlayers() {
-      const values = Array.from(document.querySelectorAll("#inputs input")).map(input => input.value.trim());
-      localStorage.setItem("players", JSON.stringify(values));
-    }
+      const savedPlayers = JSON.parse(localStorage.getItem(`${storagePrefix}_players`) || "[]");
 
-    function resetPlayers() {
-      if (!confirm("저장된 멤버를 초기화할까요?")) return;
-
-      localStorage.removeItem("players");
-      localStorage.removeItem("lastTeams");
-
-      document.querySelectorAll("#inputs input").forEach(input => input.value = "");
-      document.getElementById("team1").innerHTML = "";
-      document.getElementById("team2").innerHTML = "";
-      document.getElementById("message").textContent = "멤버가 초기화되었습니다.";
-    }
-
-    function getPlayers() {
-      return Array.from(document.querySelectorAll("#inputs input")).map(input => input.value.trim());
-    }
-
-    function makeTeams(players) {
-      const team1 = [];
-      const team2 = [];
-
-      for (let i = 0; i < players.length; i += 2) {
-        const a = players[i];
-        const b = players[i + 1];
-
-        if (Math.random() < 0.5) {
-          team1.push(a);
-          team2.push(b);
-        } else {
-          team1.push(b);
-          team2.push(a);
-        }
+      for (let i = 0; i < PLAYER_COUNT; i++) {
+        const input = document.createElement("input");
+        input.placeholder = `플레이어 ${i + 1}`;
+        input.value = savedPlayers[i] || "";
+        input.addEventListener("input", savePlayers);
+        inputsDiv.appendChild(input);
       }
 
-      return { team1, team2 };
-    }
-
-    function normalizeTeam(team) {
-      return [...team].sort().join("|");
-    }
-
-    function isSameAsPrevious(result, previous) {
-      if (!previous) return false;
-
-      const currentA = normalizeTeam(result.team1);
-      const currentB = normalizeTeam(result.team2);
-      const prevA = normalizeTeam(previous.team1);
-      const prevB = normalizeTeam(previous.team2);
-
-      return (currentA === prevA && currentB === prevB) || (currentA === prevB && currentB === prevA);
-    }
-
-    function displayTeam(id, team) {
-      const ul = document.getElementById(id);
-      ul.innerHTML = "";
-
-      team.forEach(name => {
-        const li = document.createElement("li");
-        li.textContent = name;
-        ul.appendChild(li);
-      });
-    }
-
-    function countChangedLines(current, previous) {
-      if (!previous) return 5;
-
-      let changed = 0;
-
-      for (let i = 0; i < 5; i++) {
-        const currentBlue = current.team1[i];
-        const currentRed = current.team2[i];
-        const prevBlue = previous.team1[i];
-        const prevRed = previous.team2[i];
-
-        if (currentBlue !== prevBlue || currentRed !== prevRed) {
-          changed++;
-        }
+      function savePlayers() {
+        const values = Array.from(inputsDiv.querySelectorAll("input")).map(input => input.value.trim());
+        localStorage.setItem(`${storagePrefix}_players`, JSON.stringify(values));
       }
 
-      return changed;
-    }
+      function resetPlayers() {
+        if (!confirm("저장된 멤버를 초기화할까요?")) return;
 
-    function copyTeams() {
-      const team1Items = Array.from(document.querySelectorAll("#team1 li")).map(li => li.textContent.trim());
-      const team2Items = Array.from(document.querySelectorAll("#team2 li")).map(li => li.textContent.trim());
+        localStorage.removeItem(`${storagePrefix}_players`);
+        localStorage.removeItem(`${storagePrefix}_lastTeams`);
 
-      if (team1Items.length !== 5 || team2Items.length !== 5) {
-        alert("먼저 팀을 섞어주세요.");
-        return;
+        inputsDiv.querySelectorAll("input").forEach(input => input.value = "");
+        team1El.innerHTML = "";
+        team2El.innerHTML = "";
+        messageEl.textContent = "멤버가 초기화되었습니다.";
       }
 
-      let text = "블루\t레드\n";
-      for (let i = 0; i < 5; i++) {
-        text += `${team1Items[i]}\t${team2Items[i]}\n`;
+      function getPlayers() {
+        return Array.from(inputsDiv.querySelectorAll("input")).map(input => input.value.trim());
       }
 
-      navigator.clipboard.writeText(text)
-        .then(() => {
-          document.getElementById("message").textContent = "블루 / 레드 형식으로 복사되었습니다.";
-        })
-        .catch(() => {
-          const textarea = document.createElement("textarea");
-          textarea.value = text;
-          document.body.appendChild(textarea);
-          textarea.select();
-          try {
-            document.execCommand("copy");
-            document.getElementById("message").textContent = "블루 / 레드 형식으로 복사되었습니다.";
-          } catch (e) {
-            alert("복사에 실패했습니다. 브라우저 권한을 확인해주세요.");
+      function makeTeams(players) {
+        const team1 = [];
+        const team2 = [];
+
+        for (let i = 0; i < players.length; i += 2) {
+          const a = players[i];
+          const b = players[i + 1];
+
+          if (Math.random() < 0.5) {
+            team1.push(a);
+            team2.push(b);
+          } else {
+            team1.push(b);
+            team2.push(a);
           }
-          document.body.removeChild(textarea);
+        }
+
+        return { team1, team2 };
+      }
+
+      function normalizeTeam(team) {
+        return [...team].sort().join("|");
+      }
+
+      function isSameAsPrevious(result, previous) {
+        if (!previous) return false;
+
+        const currentA = normalizeTeam(result.team1);
+        const currentB = normalizeTeam(result.team2);
+        const prevA = normalizeTeam(previous.team1);
+        const prevB = normalizeTeam(previous.team2);
+
+        return (currentA === prevA && currentB === prevB) || (currentA === prevB && currentB === prevA);
+      }
+
+      function displayTeam(el, team) {
+        el.innerHTML = "";
+
+        team.forEach(name => {
+          const li = document.createElement("li");
+          li.textContent = name;
+          el.appendChild(li);
         });
-    }
-
-    function shuffleTeams() {
-      const players = getPlayers();
-
-      if (players.length !== PLAYER_COUNT || players.some(name => name === "")) {
-        alert("10명의 이름을 모두 입력해야 합니다.");
-        return;
       }
 
-      const previousResult = JSON.parse(localStorage.getItem("lastTeams") || "null");
+      function countChangedLines(current, previous) {
+        if (!previous) return 5;
 
-      let result = null;
-      let attempts = 0;
+        let changed = 0;
 
-      do {
-        result = makeTeams(players);
-        attempts++;
-      } while (previousResult && countChangedLines(result, previousResult) < 2 && attempts < 50);
+        for (let i = 0; i < 5; i++) {
+          const currentBlue = current.team1[i];
+          const currentRed = current.team2[i];
+          const prevBlue = previous.team1[i];
+          const prevRed = previous.team2[i];
 
-      displayTeam("team1", result.team1);
-      displayTeam("team2", result.team2);
+          if (currentBlue !== prevBlue || currentRed !== prevRed) {
+            changed++;
+          }
+        }
 
-      localStorage.setItem("lastTeams", JSON.stringify(result));
-
-      if (!previousResult) {
-        document.getElementById("message").textContent = "팀이 섞였습니다.";
-      } else {
-        const changedLines = countChangedLines(result, previousResult);
-        document.getElementById("message").textContent = `직전 결과와 ${changedLines}라인 다르게 섞었습니다.`;
+        return changed;
       }
+
+      function copyTeams() {
+        const team1Items = Array.from(team1El.querySelectorAll("li")).map(li => li.textContent.trim());
+        const team2Items = Array.from(team2El.querySelectorAll("li")).map(li => li.textContent.trim());
+
+        if (team1Items.length !== 5 || team2Items.length !== 5) {
+          alert("먼저 팀을 섞어주세요.");
+          return;
+        }
+
+        let text = "블루\t레드\n";
+        for (let i = 0; i < 5; i++) {
+          text += `${team1Items[i]}\t${team2Items[i]}\n`;
+        }
+
+        navigator.clipboard.writeText(text)
+          .then(() => {
+            messageEl.textContent = "블루 / 레드 형식으로 복사되었습니다.";
+          })
+          .catch(() => {
+            const textarea = document.createElement("textarea");
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+              document.execCommand("copy");
+              messageEl.textContent = "블루 / 레드 형식으로 복사되었습니다.";
+            } catch (e) {
+              alert("복사에 실패했습니다. 브라우저 권한을 확인해주세요.");
+            }
+            document.body.removeChild(textarea);
+          });
+      }
+
+      function shuffleTeams() {
+        const players = getPlayers();
+
+        if (players.length !== PLAYER_COUNT || players.some(name => name === "")) {
+          alert("10명의 이름을 모두 입력해야 합니다.");
+          return;
+        }
+
+        const previousResult = JSON.parse(localStorage.getItem(`${storagePrefix}_lastTeams`) || "null");
+
+        let result = null;
+        let attempts = 0;
+
+        do {
+          result = makeTeams(players);
+          attempts++;
+        } while (previousResult && countChangedLines(result, previousResult) < 2 && attempts < 50);
+
+        displayTeam(team1El, result.team1);
+        displayTeam(team2El, result.team2);
+
+        localStorage.setItem(`${storagePrefix}_lastTeams`, JSON.stringify(result));
+
+        if (!previousResult) {
+          messageEl.textContent = "팀이 섞였습니다.";
+        } else {
+          const changedLines = countChangedLines(result, previousResult);
+          messageEl.textContent = `직전 결과와 ${changedLines}라인 다르게 섞었습니다.`;
+        }
+      }
+
+      shuffleBtn.addEventListener("click", shuffleTeams);
+      copyBtn.addEventListener("click", copyTeams);
+      resetBtn.addEventListener("click", resetPlayers);
     }
+
+    createShuffleApp("shuffle1", "teamShuffleA");
+    createShuffleApp("shuffle2", "teamShuffleB");
   </script>
 </body>
 </html>

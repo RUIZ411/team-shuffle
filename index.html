@@ -1,12 +1,183 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BKG 증바람랜드 팀 셔플</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f3f4f6;
+  color: #111827;
+  padding: 20px;
+  transition: 0.3s;
+}
+
+body.dark {
+  background: #111827;
+  color: white;
+}
+
+.topbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 20px;
+}
+
+.mode-btn {
+  padding: 10px 14px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.wrap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.box {
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+}
+
+body.dark .box {
+  background: #1f2937;
+}
+
+h1 {
+  text-align: center;
+  font-size: 24px;
+}
+
+.inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+input {
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+}
+
+.buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+button {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.shuffle {
+  background: #3b82f6;
+  color: white;
+}
+
+.reset {
+  background: #e5e7eb;
+}
+
+.teams {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.team {
+  background: #f9fafb;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+body.dark .team {
+  background: #374151;
+}
+
+ul {
+  padding-left: 20px;
+}
+
+@media(max-width:900px){
+  .wrap{
+    grid-template-columns:1fr;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="topbar">
+  <button class="mode-btn" onclick="toggleMode()">다크모드</button>
+</div>
+
+<div class="wrap">
+
+  <div class="box" id="shuffle1">
+    <h1>BKG 증바람랜드 A</h1>
+    <div class="inputs"></div>
+    <div class="buttons">
+      <button class="shuffle">팀 섞기</button>
+      <button class="reset">초기화</button>
+    </div>
+    <div class="teams">
+      <div class="team">
+        <h3>블루</h3>
+        <ul class="team1"></ul>
+      </div>
+      <div class="team">
+        <h3>레드</h3>
+        <ul class="team2"></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="box" id="shuffle2">
+    <h1>BKG 증바람랜드 B</h1>
+    <div class="inputs"></div>
+    <div class="buttons">
+      <button class="shuffle">팀 섞기</button>
+      <button class="reset">초기화</button>
+    </div>
+    <div class="teams">
+      <div class="team">
+        <h3>블루</h3>
+        <ul class="team1"></ul>
+      </div>
+      <div class="team">
+        <h3>레드</h3>
+        <ul class="team2"></ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {
   getDatabase,
   ref,
-  onValue,
   set,
-  update,
-  get
+  onValue
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 
 const firebaseConfig = {
@@ -16,88 +187,91 @@ const firebaseConfig = {
   projectId: "team-shuffle-9017c",
   storageBucket: "team-shuffle-9017c.firebasestorage.app",
   messagingSenderId: "629689458782",
-  appId: "1:629689458782:web:8b9644a6d3089dd74794cf",
-  measurementId: "G-NXYZY0NMMH"
+  appId: "1:629689458782:web:8b9644a6d3089dd74794cf"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-function bindInput(room) {
-  const inputs = document.querySelectorAll(`#${room} .inputs input`);
-  const roomRef = ref(db, room + "/players");
+function createApp(id) {
+  const root = document.getElementById(id);
+  const inputs = root.querySelector(".inputs");
+  const team1 = root.querySelector(".team1");
+  const team2 = root.querySelector(".team2");
 
-  inputs.forEach((input, idx) => {
-    input.addEventListener("input", async () => {
-      const values = Array.from(inputs).map(i => i.value.trim());
-      await set(roomRef, values);
-    });
-  });
+  for(let i=0;i<10;i++){
+    const input = document.createElement("input");
+    input.placeholder = `플레이어 ${i+1}`;
+    input.addEventListener("input", save);
+    inputs.appendChild(input);
+  }
 
-  onValue(roomRef, snapshot => {
-    const data = snapshot.val() || [];
-    inputs.forEach((input, idx) => {
-      if (input !== document.activeElement) {
-        input.value = data[idx] || "";
+  async function save(){
+    const values = [...inputs.querySelectorAll("input")].map(v=>v.value);
+    await set(ref(db,id+"/players"), values);
+  }
+
+  onValue(ref(db,id+"/players"), snap=>{
+    const data = snap.val() || [];
+    [...inputs.querySelectorAll("input")].forEach((input,i)=>{
+      if(document.activeElement!==input){
+        input.value = data[i] || "";
       }
     });
   });
-}
 
-function bindShuffle(room) {
-  const root = document.getElementById(room);
-  const btn = root.querySelector(".shuffle-btn");
-  const team1El = root.querySelector(".team1");
-  const team2El = root.querySelector(".team2");
+  root.querySelector(".shuffle").addEventListener("click", async ()=>{
+    const players = [...inputs.querySelectorAll("input")].map(v=>v.value);
 
-  btn.addEventListener("click", async () => {
-    const players = Array.from(root.querySelectorAll(".inputs input"))
-      .map(i => i.value.trim());
+    if(players.some(v=>!v)) return alert("10명 입력");
 
-    if (players.some(v => !v)) {
-      alert("10명 모두 입력");
-      return;
-    }
+    let a=[], b=[];
 
-    const team1 = [];
-    const team2 = [];
-
-    for (let i = 0; i < players.length; i += 2) {
-      if (Math.random() < 0.5) {
-        team1.push(players[i]);
-        team2.push(players[i + 1]);
-      } else {
-        team1.push(players[i + 1]);
-        team2.push(players[i]);
+    for(let i=0;i<10;i+=2){
+      if(Math.random()<0.5){
+        a.push(players[i]);
+        b.push(players[i+1]);
+      }else{
+        a.push(players[i+1]);
+        b.push(players[i]);
       }
     }
 
-    await set(ref(db, room + "/teams"), { team1, team2 });
+    await set(ref(db,id+"/teams"), {a,b});
   });
 
-  onValue(ref(db, room + "/teams"), snapshot => {
-    const data = snapshot.val();
-    if (!data) return;
+  onValue(ref(db,id+"/teams"), snap=>{
+    const data = snap.val();
+    if(!data) return;
 
-    team1El.innerHTML = "";
-    team2El.innerHTML = "";
+    team1.innerHTML="";
+    team2.innerHTML="";
 
-    data.team1.forEach(name => {
-      const li = document.createElement("li");
-      li.textContent = name;
-      team1El.appendChild(li);
+    data.a.forEach(v=>{
+      const li=document.createElement("li");
+      li.textContent=v;
+      team1.appendChild(li);
     });
 
-    data.team2.forEach(name => {
-      const li = document.createElement("li");
-      li.textContent = name;
-      team2El.appendChild(li);
+    data.b.forEach(v=>{
+      const li=document.createElement("li");
+      li.textContent=v;
+      team2.appendChild(li);
     });
+  });
+
+  root.querySelector(".reset").addEventListener("click", async ()=>{
+    await set(ref(db,id), null);
   });
 }
 
-bindInput("shuffle1");
-bindInput("shuffle2");
-bindShuffle("shuffle1");
-bindShuffle("shuffle2");
+createApp("shuffle1");
+createApp("shuffle2");
+
+window.toggleMode = function(){
+  document.body.classList.toggle("dark");
+}
 </script>
+
+</body>
+</html>

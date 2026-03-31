@@ -57,6 +57,15 @@ body.dark .box {
 h1 {
   text-align: center;
   font-size: 24px;
+  margin: 0 0 14px;
+}
+
+.desc {
+  text-align: center;
+  font-size: 14px;
+  opacity: 0.85;
+  margin-bottom: 14px;
+  line-height: 1.5;
 }
 
 .inputs {
@@ -118,6 +127,11 @@ body.dark .team {
 
 ul {
   padding-left: 20px;
+  margin: 0;
+}
+
+li {
+  margin: 6px 0;
 }
 
 .message {
@@ -125,6 +139,7 @@ ul {
   font-size: 14px;
   opacity: 0.95;
   line-height: 1.5;
+  white-space: pre-line;
 }
 
 @media (max-width: 900px) {
@@ -145,6 +160,7 @@ ul {
 
   <div class="box" id="shuffle1">
     <h1>BKG 증바람랜드 A</h1>
+    <div class="desc">최소 10명, 최대 12명 입력 가능. 팀 섞기는 10명 또는 12명일 때만 가능합니다.</div>
     <div class="inputs"></div>
     <div class="buttons">
       <button class="shuffle">팀 섞기</button>
@@ -166,6 +182,7 @@ ul {
 
   <div class="box" id="shuffle2">
     <h1>BKG 증바람랜드 B</h1>
+    <div class="desc">최소 10명, 최대 12명 입력 가능. 팀 섞기는 10명 또는 12명일 때만 가능합니다.</div>
     <div class="inputs"></div>
     <div class="buttons">
       <button class="shuffle">팀 섞기</button>
@@ -209,7 +226,9 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-const PLAYER_COUNT = 10;
+
+const MIN_PLAYERS = 10;
+const MAX_PLAYERS = 12;
 
 function normalizeTeam(team) {
   return [...team].sort().join("|");
@@ -230,11 +249,20 @@ function isSameAsPrevious(current, previous) {
 }
 
 function countChangedLines(current, previous) {
-  if (!previous || !previous.team1 || !previous.team2) return 5;
+  if (!previous || !previous.team1 || !previous.team2) {
+    return Math.max(current.team1.length, current.team2.length);
+  }
+
+  const lineCount = Math.max(
+    current.team1.length,
+    current.team2.length,
+    previous.team1.length,
+    previous.team2.length
+  );
 
   let changed = 0;
 
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < lineCount; i++) {
     const currentBlue = current.team1[i] || "";
     const currentRed = current.team2[i] || "";
     const prevBlue = previous.team1[i] || "";
@@ -275,15 +303,25 @@ function createApp(id) {
   const team2El = root.querySelector(".team2");
   const messageEl = root.querySelector(".message");
 
-  for (let i = 0; i < PLAYER_COUNT; i++) {
+  for (let i = 0; i < MAX_PLAYERS; i++) {
     const input = document.createElement("input");
     input.placeholder = `플레이어 ${i + 1}`;
     input.addEventListener("input", savePlayers);
     inputsWrap.appendChild(input);
   }
 
+  function getInputElements() {
+    return [...inputsWrap.querySelectorAll("input")];
+  }
+
+  function getPlayersFromInputs() {
+    return getInputElements()
+      .map(input => input.value.trim())
+      .filter(name => name !== "");
+  }
+
   async function savePlayers() {
-    const players = [...inputsWrap.querySelectorAll("input")].map(input => input.value.trim());
+    const players = getInputElements().map(input => input.value.trim());
     const snapshot = await get(ref(db, id));
     const prevData = snapshot.exists() ? snapshot.val() : {};
 
@@ -316,11 +354,11 @@ function createApp(id) {
 
   onValue(ref(db, id), snapshot => {
     const data = snapshot.val() || {};
-    const players = Array.isArray(data.players) ? data.players : [];
+    const savedPlayers = Array.isArray(data.players) ? data.players : [];
 
-    [...inputsWrap.querySelectorAll("input")].forEach((input, i) => {
+    getInputElements().forEach((input, i) => {
       if (document.activeElement !== input) {
-        input.value = players[i] || "";
+        input.value = savedPlayers[i] || "";
       }
     });
 
@@ -329,10 +367,21 @@ function createApp(id) {
   });
 
   root.querySelector(".shuffle").addEventListener("click", async () => {
-    const players = [...inputsWrap.querySelectorAll("input")].map(input => input.value.trim());
+    const rawPlayers = getInputElements().map(input => input.value.trim());
+    const players = rawPlayers.filter(name => name !== "");
 
-    if (players.length !== PLAYER_COUNT || players.some(v => !v)) {
-      alert("10명을 모두 입력해주세요.");
+    if (players.length < MIN_PLAYERS) {
+      alert("최소 10명을 입력해주세요.");
+      return;
+    }
+
+    if (players.length > MAX_PLAYERS) {
+      alert("최대 12명까지만 입력 가능합니다.");
+      return;
+    }
+
+    if (players.length % 2 !== 0) {
+      alert("팀을 반반으로 나누려면 짝수 인원이어야 합니다.\n10명 또는 12명으로 맞춰주세요.");
       return;
     }
 
@@ -349,7 +398,7 @@ function createApp(id) {
     } while (
       previousResult &&
       (isSameAsPrevious(result, previousResult) || countChangedLines(result, previousResult) < 2) &&
-      attempts < 100
+      attempts < 200
     );
 
     if (
@@ -360,14 +409,14 @@ function createApp(id) {
       return;
     }
 
-    const changedLines = previousResult ? countChangedLines(result, previousResult) : 5;
+    const changedLines = previousResult ? countChangedLines(result, previousResult) : result.team1.length;
 
     await set(ref(db, id), {
-      players,
+      players: rawPlayers,
       lastTeams: result,
       message: previousResult
-        ? `직전 결과와 ${changedLines}라인 다르게 섞었습니다.`
-        : "첫 팀 결과가 생성되었습니다."
+        ? `총 ${players.length}명 기준으로 직전 결과와 ${changedLines}라인 다르게 섞었습니다.`
+        : `총 ${players.length}명 기준 첫 팀 결과가 생성되었습니다.`
     });
   });
 
@@ -375,14 +424,16 @@ function createApp(id) {
     const blue = [...team1El.querySelectorAll("li")].map(li => li.textContent.trim());
     const red = [...team2El.querySelectorAll("li")].map(li => li.textContent.trim());
 
-    if (blue.length !== 5 || red.length !== 5) {
+    if (blue.length === 0 || red.length === 0) {
       alert("먼저 팀을 섞어주세요.");
       return;
     }
 
     let text = "블루\t레드\n";
-    for (let i = 0; i < 5; i++) {
-      text += `${blue[i]}\t${red[i]}\n`;
+    const lineCount = Math.max(blue.length, red.length);
+
+    for (let i = 0; i < lineCount; i++) {
+      text += `${blue[i] || ""}\t${red[i] || ""}\n`;
     }
 
     try {
@@ -409,7 +460,7 @@ function createApp(id) {
     if (!confirm("멤버와 직전 팀 결과를 초기화할까요?")) return;
 
     await set(ref(db, id), {
-      players: Array(PLAYER_COUNT).fill(""),
+      players: Array(MAX_PLAYERS).fill(""),
       lastTeams: null,
       message: "초기화되었습니다."
     });
